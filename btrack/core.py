@@ -1,4 +1,5 @@
 import sqlite3
+import hashlib
 
 def init_db(db_path):
 
@@ -18,6 +19,21 @@ def init_db(db_path):
 		CREATE INDEX btrack_hash_idx
 		ON btrack(hash)
 		''')
+
+def compute_file_hash(file_path):
+
+	BUFFER_SIZE = 1 << 24
+	sha256 = hashlib.sha256()
+
+	with open(file_path, 'r') as f:
+
+		while True:
+			data = f.read(BUFFER_SIZE)
+			if not data:
+				break
+			sha256.update(data)
+
+	return sha256.hexdigest()
 
 def main():
 
