@@ -101,7 +101,7 @@ def generate_delta(db_path, dir_path):
 	delta.deleted = list(unmatched_paths)
 	return delta
 
-def apply_delta(delta, db_path, dir_path):
+def apply_delta(delta, db_path):
 	with sqlite3.connect(db_path) as conn:
 		c = conn.cursor()
 
