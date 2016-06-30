@@ -3,6 +3,8 @@ import os
 import hashlib
 import time
 
+DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
+
 class Delta:
 	def __init__(self):
 		self.created = []
@@ -41,8 +43,6 @@ def init_db(db_path):
 		''')
 
 def generate_delta(db_path, dir_path):
-	DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
-
 	with sqlite3.connect(db_path) as conn:
 		conn.row_factory = sqlite3.Row
 		c = conn.cursor()
@@ -100,6 +100,45 @@ def generate_delta(db_path, dir_path):
 
 	delta.deleted = list(unmatched_paths)
 	return delta
+
+def apply_delta(delta, db_path, dir_path):
+	with sqlite3.connect(db_path) as conn:
+		c = conn.cursor()
+
+		for fm in delta.moved:
+			c.execute('''
+			UPDATE btrack
+			SET path=?
+			WHERE path=?
+			''', [fm.new_path, fm.old_path])
+
+		for fs in delta.created:
+			hash_mod_time = time.strftime(DATE_FORMAT, time.localtime())
+			c.execute('''
+			INSERT INTO btrack (path, hash, file_mod_time, hash_mod_time)
+			VALUES (?, ?, ?, ?)
+			''', [fs.path, fs.hash, fs.file_mod_time, hash_mod_time])
+
+		for path in delta.deleted:
+			c.execute('''
+			DELETE FROM btrack
+			WHERE path=?
+			''', [path])
+
+		for fs in delta.modified:
+			hash_mod_time = time.strftime(DATE_FORMAT, time.localtime())
+			c.execute('''
+			UPDATE btrack
+			SET hash=?, file_mod_time=?, hash_mod_time=?
+			WHERE path=?
+			''', [fs.hash, fs.file_mod_time, hash_mod_time, fs.path])
+
+		for fs in delta.touched:
+			c.execute('''
+			UPDATE btrack
+			SET file_mod_time=?
+			WHERE path=?
+			''', [fs.file_mod_time, fs.path])
 
 def compute_file_hash(file_path):
 	BUFFER_SIZE = 1 << 24
