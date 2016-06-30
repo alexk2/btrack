@@ -2,6 +2,7 @@ import sqlite3
 import os
 import hashlib
 import time
+import argparse
 
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
@@ -154,4 +155,42 @@ def compute_file_hash(file_path):
 	return sha256.hexdigest()
 
 def main():
-	pass
+	parser = argparse.ArgumentParser()
+	parser.add_argument('db_path')
+	parser.add_argument('dir_path')
+	parser.add_argument('-u', '--update', help='update the database', \
+		action='store_true')
+	parser.add_argument('-p', '--print-delta', help='print a delta summary', \
+		action='store_true')
+	args = parser.parse_args()
+
+	delta = generate_delta(args.db_path, args.dir_path)
+
+	if args.update:
+		apply_delta(delta, args.db_path)
+
+	if args.print_delta:
+		if delta.moved:
+			print "---Moved---"
+			for fm in delta.moved:
+				print fm.old_path + " -> " + fm.new_path
+		if delta.created:
+			print "---Created---"
+			for fs in delta.created:
+				print fs.path
+		if delta.deleted:
+			print "---Deleted---"
+			for path in delta.deleted:
+				print path
+		if delta.modified:
+			print "---Modified---"
+			for fs in delta.modified:
+				print fs.path
+		if delta.touched:
+			print "---Touched---"
+			for fs in delta.touched:
+				print fs.path
+		if delta.deteriorated:
+			print "---Deteriorated---"
+			for fs in delta.deteriorated:
+				print fs.path
