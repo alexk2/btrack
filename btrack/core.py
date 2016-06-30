@@ -82,11 +82,10 @@ def generate_delta(db_path, dir_path):
 					WHERE hash = ?
 					''', [curr_hash]).fetchall()
 
-					if not hash_records:
-						delta.created.append(curr_state)
-
+					match_found = False
 					for hash_record in hash_records:
 						if hash_record['path'] in unmatched_paths:
+							match_found = True
 							unmatched_paths.remove(hash_record['path'])
 
 							delta.moved.append(FileMovement(hash_record['path'], \
@@ -95,6 +94,9 @@ def generate_delta(db_path, dir_path):
 								delta.touched.append(curr_state)
 
 							break
+
+					if not match_found:
+						delta.created.append(curr_state)
 
 	delta.deleted = list(unmatched_paths)
 	return delta
